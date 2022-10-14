@@ -1,4 +1,4 @@
-package project.BBolCha.domain.Model;
+package project.BBolCha.global.Model;
 
 
 import com.fasterxml.jackson.annotation.JsonFormat;
@@ -9,7 +9,6 @@ import lombok.Getter;
 @Getter
 @JsonFormat(shape = JsonFormat.Shape.OBJECT)
 public enum Status {
-    LOGIN_TRUE(200, "로그인 성공");
-    private Integer status;
-    private String statusMessage;
+    LOGIN_TRUE("로그인 성공");
+    private final String statusMessage;
 }
