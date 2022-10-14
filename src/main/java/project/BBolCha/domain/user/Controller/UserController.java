@@ -6,7 +6,6 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
-import project.BBolCha.domain.Model.Status;
 import project.BBolCha.domain.user.Dto.UserDto;
 import project.BBolCha.domain.user.Service.UserService;
 
@@ -18,8 +17,8 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping
-    public ResponseEntity<Status> register(
-            @RequestBody UserDto request
+    public ResponseEntity<UserDto.registerResponse> register(
+            @RequestBody UserDto.register request
     ) {
         return userService.register(request);
     }
