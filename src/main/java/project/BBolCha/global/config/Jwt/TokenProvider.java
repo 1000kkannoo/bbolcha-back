@@ -29,6 +29,9 @@ public class TokenProvider implements InitializingBean {
     private final long tokenValidityInMilliseconds;
     private final long refreshTokenValidityInMilliseconds;
 
+    @Value("${jwt.auth.secret}")
+    String auth;
+
     private Key key;
 
 
@@ -63,11 +66,25 @@ public class TokenProvider implements InitializingBean {
                 .compact();
     }
 
-    public String createRefreshToken() {
-        Date now = new Date();
+    public String reCreateToken(String username) {
+
+        long now = (new Date()).getTime();
+        Date validity = new Date(now + this.tokenValidityInMilliseconds);
+
         return Jwts.builder()
-                .setIssuedAt(now)
-                .setExpiration(new Date(now.getTime()  + this.refreshTokenValidityInMilliseconds))
+                .setSubject(username)
+                .claim(AUTHORITIES_KEY, auth)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .setExpiration(validity)
+                .compact();
+    }
+
+    public String createRefreshToken(String username) {
+        long now = (new Date()).getTime();
+        Date validity = new Date(now + this.refreshTokenValidityInMilliseconds);
+        return Jwts.builder()
+                .setSubject(username)
+                .setExpiration(validity)
                 .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
@@ -89,6 +106,19 @@ public class TokenProvider implements InitializingBean {
 
         return new UsernamePasswordAuthenticationToken(principal, token, authorities);
     }
+
+    public String getRefreshTokenInfo(String token) {
+        Claims claims = Jwts
+                .parserBuilder()
+                .setSigningKey(key)
+                .build()
+                .parseClaimsJws(token)
+                .getBody();
+
+        return claims.getSubject();
+    }
+
+
 
     public boolean validateToken(String token) {
         try {
