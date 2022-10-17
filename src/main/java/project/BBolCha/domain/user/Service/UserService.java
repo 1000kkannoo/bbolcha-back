@@ -1,6 +1,5 @@
 package project.BBolCha.domain.user.Service;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -11,15 +10,19 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import project.BBolCha.domain.user.Dto.UserDto;
 import project.BBolCha.domain.user.Entity.Authority;
 import project.BBolCha.domain.user.Entity.User;
 import project.BBolCha.domain.user.Entity.UserToken;
 import project.BBolCha.domain.user.Repository.TokenRepository;
 import project.BBolCha.domain.user.Repository.UserRepository;
+import project.BBolCha.global.Exception.CustomException;
 import project.BBolCha.global.config.Jwt.TokenProvider;
 
 import java.util.Collections;
+
+import static project.BBolCha.global.Exception.CustomErrorCode.LOGIN_FALSE;
 
 
 @Service
@@ -37,6 +40,7 @@ public class UserService {
             .build();
 
     // Validate 및 단순화 메소드
+
     private UserToken saveRefreshToken() {
         return tokenRepository.save(
                 UserToken.builder()
@@ -67,13 +71,48 @@ public class UserService {
         return tokenProvider.createToken(authentication);
     }
 
+    private void LOGIN_VALIDATE(UserDto.login request) {
+        userRepository.findByEmail(request.getEmail())
+                .orElseThrow(
+                        () -> new CustomException(LOGIN_FALSE)
+                );
+
+        if (!passwordEncoder.matches(
+                request.getPw(),
+                userRepository.findByEmail(request.getEmail())
+                        .orElseThrow(
+                                () -> new CustomException(LOGIN_FALSE)
+                        ).getPw())
+        ) {
+            throw new CustomException(LOGIN_FALSE);
+        }
+    }
+
     // Service
     // 회원가입
+    @Transactional
     public ResponseEntity<UserDto.registerResponse> register(UserDto.register request) {
         return new ResponseEntity<>(UserDto.registerResponse.response(
                 saveUserInfo(request)
                 , getAccessToken(request)
                 , saveRefreshToken()
         ), HttpStatus.CREATED);
+    }
+
+    //로그인
+    @Transactional
+    public ResponseEntity<UserDto.loginResponse> login(UserDto.login request) {
+
+        LOGIN_VALIDATE(request);
+
+        UsernamePasswordAuthenticationToken authenticationToken =
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPw());
+        Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+
+        return new ResponseEntity<>(UserDto.loginResponse.response(
+                tokenProvider.createToken(authentication),
+                saveRefreshToken()
+        ), HttpStatus.OK);
     }
 }

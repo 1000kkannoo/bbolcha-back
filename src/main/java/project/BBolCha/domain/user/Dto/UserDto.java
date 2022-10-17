@@ -35,4 +35,25 @@ public class UserDto implements Serializable {
                     .build();
         }
     }
+
+    @Data
+    @Builder
+    public static class login{
+        private final String pw;
+        private final String email;
+    }
+
+    @Data
+    @Builder
+    public static class loginResponse{
+        private final String atk;
+        private final String rtk;
+        public static loginResponse response(String atk, UserToken rtk){
+            return loginResponse.builder()
+                    .atk(atk)
+                    .rtk(rtk.getToken())
+                    .build();
+        }
+    }
+
 }
