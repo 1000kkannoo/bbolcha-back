@@ -34,6 +34,22 @@ public class CustomExceptionHandler {
                 .build();
     }
 
+    // 서버에러 예외처리
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(ServerException.class)
+    public CustomErrorResponse serverHandleException(
+            ServerException e,
+            HttpServletRequest request
+    ) {
+        log.error("errorCode : {}, url {}, message: {}",
+                e.getCustomErrorCode(), request.getRequestURI(), e.getDetaliMessage());
+
+        return CustomErrorResponse.builder()
+                .status(e.getCustomErrorCode())
+                .statusMessage(e.getDetaliMessage())
+                .build();
+    }
+
     // 예외처리 하기 힘든 예외처리
     @ExceptionHandler(value = {
             HttpRequestMethodNotSupportedException.class, // get, post 등 메소드(요청)가 매치하지 않았을경우
