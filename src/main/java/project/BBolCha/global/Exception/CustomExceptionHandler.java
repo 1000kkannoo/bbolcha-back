@@ -18,7 +18,7 @@ import static project.BBolCha.global.Exception.CustomErrorCode.INVALID_REQUEST;
 
 public class CustomExceptionHandler {
 
-    // 글로벌 예외처리
+    // BAD_REQUEST 예외처리
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     @ExceptionHandler(CustomException.class)
     public CustomErrorResponse handleException(
@@ -34,8 +34,8 @@ public class CustomExceptionHandler {
                 .build();
     }
 
-    // 서버에러 예외처리
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    // INTERNAL_SERVER_ERROR 예외처리
+    @ResponseStatus(HttpStatus.GONE)
     @ExceptionHandler(ServerException.class)
     public CustomErrorResponse serverHandleException(
             ServerException e,
@@ -43,7 +43,6 @@ public class CustomExceptionHandler {
     ) {
         log.error("errorCode : {}, url {}, message: {}",
                 e.getCustomErrorCode(), request.getRequestURI(), e.getDetaliMessage());
-
         return CustomErrorResponse.builder()
                 .status(e.getCustomErrorCode())
                 .statusMessage(e.getDetaliMessage())
@@ -69,6 +68,7 @@ public class CustomExceptionHandler {
 
     // 알수없거나 알아내기 힘들 오류의 최후 처리
     @ExceptionHandler(Exception.class)
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
     public CustomErrorResponse handleException(
             Exception e, HttpServletRequest request
     ) {
