@@ -19,6 +19,7 @@ import project.BBolCha.domain.user.Entity.User;
 import project.BBolCha.domain.user.Repository.UserRepository;
 import project.BBolCha.global.Exception.CustomException;
 import project.BBolCha.global.Exception.ServerException;
+import project.BBolCha.global.Model.Status;
 import project.BBolCha.global.config.Jwt.SecurityUtil;
 import project.BBolCha.global.config.Jwt.TokenProvider;
 import project.BBolCha.global.config.RedisDao;
@@ -30,6 +31,7 @@ import java.util.Objects;
 
 import static project.BBolCha.global.Exception.CustomErrorCode.LOGIN_FALSE;
 import static project.BBolCha.global.Exception.CustomErrorCode.REFRESH_TOKEN_IS_BAD_REQUEST;
+import static project.BBolCha.global.Model.Status.LOGOUT_TRUE;
 
 
 @Service
@@ -133,13 +135,13 @@ public class UserService {
 
     // accessToken 재발급
     @Transactional
-    public ResponseEntity<UserDto.loginResponse> reissue(HttpServletRequest headerRequest) {
-        String refresh_token = headerRequest.getHeader("REFRESH_TOKEN");
-        String username = tokenProvider.getRefreshTokenInfo(refresh_token);
+    public ResponseEntity<UserDto.loginResponse> reissue(String rtk) {
+
+        String username = tokenProvider.getRefreshTokenInfo(rtk);
         String rtkInRedis = redisDao.getValues(username);
 
-        if (Objects.isNull(rtkInRedis) || !rtkInRedis.equals(refresh_token))
-            throw new ServerException(REFRESH_TOKEN_IS_BAD_REQUEST);
+        if (Objects.isNull(rtkInRedis) || !rtkInRedis.equals(rtk))
+            throw new ServerException(REFRESH_TOKEN_IS_BAD_REQUEST); // 410
 
         return new ResponseEntity<>(UserDto.loginResponse.response(
                 tokenProvider.reCreateToken(username),
@@ -147,10 +149,25 @@ public class UserService {
         ), HttpStatus.CREATED);
     }
 
-    public ResponseEntity<UserDto.infoResponse> read(HttpServletRequest headerRequest) {
+    // 정보 조회
+    public ResponseEntity<UserDto.infoResponse> read() {
+        TokenInfoResponseDto userInfo = getTokenInfo();
         return new ResponseEntity<>(UserDto.infoResponse.builder()
-                .email(getTokenInfo().getEmail())
-                .name(getTokenInfo().getName())
+                .email(userInfo.getEmail())
+                .name(userInfo.getName())
                 .build(), HttpStatus.OK);
+    }
+
+    // 로그아웃
+    public ResponseEntity<Status> logout(String auth) {
+        String atk = auth.substring(7);
+        Long expiration = tokenProvider.getExpiration(atk);
+        String email = SecurityContextHolder.getContext().getAuthentication().getName();
+        if (redisDao.getValues(email) != null) {
+            redisDao.deleteValues(email);
+        }
+
+        redisDao.setValues(atk, "logout", Duration.ofMillis(expiration));
+        return new ResponseEntity<>(LOGOUT_TRUE, HttpStatus.OK);
     }
 }
